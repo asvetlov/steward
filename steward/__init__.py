@@ -25,7 +25,10 @@ class Field:
         if instance is None:
             return self
         assert self.name
-        return self.getter(instance)
+        ret = instance.__dict__.get(self.name, sentinel)
+        if ret is sentinel:
+            ret = self.getter(instance)
+        return ret
 
     def getter(self, instance):
         ret = instance._dict_.get(self.name, sentinel)
@@ -49,12 +52,22 @@ class Field:
 
 
 class FieldComp(Field):
-    def __init__(self, factory, *, maker):
-        super().__init__(self, maker=maker)
-        self.factory = factory
+    def __init__(self, type):
+        super().__init__(self)
+        self.type = type
 
     def setter(self, instance, value):
-        raise AttributeError("Component field cannot be set")
+        if not isinstance(value, self.type):
+            raise TypeError("an {} is required".format(self.type.__name__))
+        instance._dict_[self.name] = value._dict_
+        instance.__dict__[self.name] = value
+
+    def getter(self, instance):
+        ret = instance.__dict__.get(self.name, sentinel)
+        if ret is sentinel:
+            ret = self.type.from_dict(instance._dict_[self.name])
+            instance.__dict__[self.name] = ret
+        return ret
 
 
 class FieldList(Field):
@@ -136,14 +149,15 @@ class Component(metaclass=ComponentMeta):
                 field.getter(self)
             except AttributeError:
                 to_report.append(name)
-        missing = ', '.join(sorted(to_report))
-        raise Error("Missing params: '{}'".format(missing))
+        if to_report:
+            missing = ', '.join(sorted(to_report))
+            raise Error("Missing params: '{}'".format(missing))
 
     @classmethod
     def from_dict(cls, props, strict_check=False):
         self = object.__new__(cls)
-        self._fields_ = props
+        self._dict_ = props
         return self
 
     def dict_view(self):
-        return self._fields_
+        return self._dict_

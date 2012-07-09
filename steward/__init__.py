@@ -11,10 +11,7 @@ class Error(Exception):
 class Field:
     name = None
 
-    def __init__(self, *, maker=None, default=sentinel):
-        if maker is not None and default is not sentinel:
-            raise Error('Please use either `maker` or `default`')
-        self.maker = maker
+    def __init__(self, *, default=sentinel):
         self.default = default
 
     def set_name(self, name):
@@ -28,19 +25,16 @@ class Field:
         ret = instance.__dict__.get(self.name, sentinel)
         if ret is sentinel:
             ret = self.getter(instance)
+        instance.__dict__[self.name] = ret
+        instance._dict_[self.name] = ret
         return ret
 
     def getter(self, instance):
         ret = instance._dict_.get(self.name, sentinel)
-        if ret is not sentinel:
-            return ret
-        if self.maker is not None:
-            ret = self.maker()
-        elif self.default is not sentinel:
+        if ret is sentinel and self.default is not sentinel:
             ret = self.default
-        else:
+        elif ret is sentinel:
             raise AttributeError("'{.name}' is not initialized".format(self))
-        instance._dict_[self.name] = ret
         return ret
 
     def __set__(self, instance, value):
@@ -49,6 +43,7 @@ class Field:
 
     def setter(self, instance, value):
         instance._dict_[self.name] = value
+        instance.__dict__[self.name] = value
 
 
 class FieldComp(Field):
@@ -143,10 +138,11 @@ class Component(metaclass=ComponentMeta):
             return
         fields = self._fields_
         to_report = []
+        klass = self.__class__
         for name in missing:
             field = fields[name]
             try:
-                field.getter(self)
+                field.__get__(self, klass)
             except AttributeError:
                 to_report.append(name)
         if to_report:
@@ -154,10 +150,10 @@ class Component(metaclass=ComponentMeta):
             raise Error("Missing params: '{}'".format(missing))
 
     @classmethod
-    def from_dict(cls, props, strict_check=False):
+    def from_dict(cls, dct):
         self = object.__new__(cls)
-        self._dict_ = props
+        self._dict_ = dct
         return self
 
-    def dict_view(self):
+    def as_dict(self):
         return self._dict_

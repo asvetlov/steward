@@ -24,18 +24,18 @@ class Field:
         assert self.name
         ret = instance.__dict__.get(self.name, sentinel)
         if ret is sentinel:
-            ret = self.getter(instance)
-        instance.__dict__[self.name] = ret
-        instance._dict_[self.name] = ret
+            ret, as_dct = self.getter(instance._dict_)
+            instance.__dict__[self.name] = ret
+            instance._dict_[self.name] = as_dct
         return ret
 
-    def getter(self, instance):
-        ret = instance._dict_.get(self.name, sentinel)
+    def getter(self, dct):
+        ret = dct.get(self.name, sentinel)
         if ret is sentinel and self.default is not sentinel:
             ret = self.default
         elif ret is sentinel:
             raise AttributeError("'{.name}' is not initialized".format(self))
-        return ret
+        return ret, ret
 
     def __set__(self, instance, value):
         assert self.name
@@ -48,7 +48,7 @@ class Field:
 
 class FieldComp(Field):
     def __init__(self, type):
-        super().__init__(self)
+        super().__init__()
         self.type = type
 
     def setter(self, instance, value):
@@ -57,12 +57,13 @@ class FieldComp(Field):
         instance._dict_[self.name] = value._dict_
         instance.__dict__[self.name] = value
 
-    def getter(self, instance):
-        ret = instance.__dict__.get(self.name, sentinel)
-        if ret is sentinel:
-            ret = self.type.from_dict(instance._dict_[self.name])
-            instance.__dict__[self.name] = ret
-        return ret
+    def getter(self, dct):
+        ret = dct.get(self.name, sentinel)
+        if ret is sentinel and self.default is not sentinel:
+            ret = self.default
+        elif ret is sentinel:
+            raise AttributeError("'{.name}' is not initialized".format(self))
+        return self.type.from_dict(ret), ret
 
 
 class FieldList(Field):
@@ -126,17 +127,22 @@ class ComponentMeta(type):
 
 
 class Component(metaclass=ComponentMeta):
+
     def __init__(self, **kwargs):
+        self._dict_ = {}
         names = self._names_
         delta = frozenset(kwargs) - names
         if delta:
             extra = ', '.join(sorted(delta))
             raise Error("Extra params: '{}'".format(extra))
-        self._dict_ = kwargs
+        missing = []
+        fields = self._fields_
+        for k, v in kwargs.items():
+            if k in names:
+                fields[k].__set__(self, v)
         missing = names - set(kwargs.keys())
         if not missing:
             return
-        fields = self._fields_
         to_report = []
         klass = self.__class__
         for name in missing:

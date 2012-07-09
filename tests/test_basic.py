@@ -18,6 +18,9 @@ class TestBasic(unittest.TestCase):
 
     def test_ctor(self):
         a = A(a=1, b='b')
+        self.assertEqual({'a', 'b', 'c'}, set(a._dict_))
+        self.assertEqual({'a', 'b', 'c', '_dict_'}, set(a.__dict__))
+        self.assertEqual({'a': 1, 'b': 'b', 'c': 'zzz'}, a._dict_)
         self.assertEqual(1, a.a)
         self.assertEqual('b', a.b)
 
@@ -48,6 +51,7 @@ class TestBasic(unittest.TestCase):
         dct = {'a': 1, 'b': 2, 'c': 3}
         r = A.from_dict(dct)
         self.assertIsInstance(r, A)
+        self.assertEqual({'_dict_': dct}, r.__dict__)
         self.assertEqual(1, r.a)
         self.assertEqual(2, r.b)
         self.assertEqual(3, r.c)

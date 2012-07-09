@@ -49,25 +49,46 @@ class Field:
 
 
 class FieldComp(Field):
-    def __init__(self, factory):
-        super().__init__(self)
+    def __init__(self, factory, *, maker):
+        super().__init__(self, maker=maker)
         self.factory = factory
+
+    def setter(self, instance, value):
+        raise AttributeError("Component field cannot be set")
 
 
 class FieldList(Field):
-    pass
+    def __init__(self):
+        super().__init__(maker=list)
+
+    def setter(self, instance, value):
+        raise AttributeError("FieldList cannot be set")
 
 
 class FieldDict(Field):
-    pass
+    def __init__(self):
+        super().__init__(maker=dict)
+
+    def setter(self, instance, value):
+        raise AttributeError("FieldList cannot be set")
 
 
-class FieldCompList(FieldList):
-    pass
+class FieldCompList(Field):
+    def __init__(self, factory):
+        super().__init__(maker=list)
+        self.factory = factory
+
+    def setter(self, instance, value):
+        raise AttributeError("FieldList cannot be set")
 
 
-class FieldCompDict(FieldList):
-    pass
+class FieldCompDict(Field):
+    def __init__(self, factory):
+        super().__init__(maker=dict)
+        self.factory = factory
+
+    def setter(self, instance, value):
+        raise AttributeError("FieldList cannot be set")
 
 
 class Namespace(OrderedDict):

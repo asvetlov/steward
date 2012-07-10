@@ -24,10 +24,10 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(1, a.a)
         self.assertEqual('b', a.b)
 
-        with self.assertRaisesRegexp(Error, "Extra params: 'z'"):
+        with self.assertRaisesRegex(Error, "Extra params: 'z'"):
             A(z=1)
 
-        with self.assertRaisesRegexp(Error, "Missing params: 'b'"):
+        with self.assertRaisesRegex(Error, "Missing params: 'b'"):
             A(a=1)
 
     def test_get_set(self):

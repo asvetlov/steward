@@ -10,6 +10,14 @@ class B(Component):
     a = FieldComp(A)
 
 
+class C(Component):
+    a = FieldComp(A, default=None)
+
+
+class D(Component):
+    a = FieldComp(A, default=A(a="unique"))
+
+
 class TestCompo(unittest.TestCase):
     def test_ctor(self):
         a = A(a=1)
@@ -50,3 +58,13 @@ class TestCompo(unittest.TestCase):
         self.assertEqual('yyy', r._dict_['a']['a'])
         self.assertIs(r.a.as_dict(), r.as_dict()['a'])
         self.assertIs(a.as_dict(), r.as_dict()['a'])
+
+    def test_default(self):
+        r = C()
+        self.assertIsNone(r.a)
+        self.assertIs(C.a.default, r.a)
+        self.assertEqual({'a': None}, r.as_dict())
+        r1 = D()
+        self.assertEqual('unique', r1.a.a)
+        self.assertIs(D.a.default, r1.a)
+        self.assertEqual({'a': {'a': 'unique'}}, r1.as_dict())

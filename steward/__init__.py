@@ -48,8 +48,11 @@ class Field:
 
 
 class FieldComp(Field):
-    def __init__(self, type):
-        super().__init__()
+    def __init__(self, type, *, default=sentinel):
+        if default is not None and default is not sentinel:
+            if not isinstance(default, type):
+                raise TypeError("an {} is required".format(self.type.__name__))
+        super().__init__(default=default)
         self.type = type
 
     def setter(self, value):
@@ -60,10 +63,14 @@ class FieldComp(Field):
     def getter(self, dct):
         ret = dct.get(self.name, sentinel)
         if ret is sentinel and self.default is not sentinel:
-            ret = self.default
+            if self.default is None:
+                return None, None
+            else:
+                return self.default, self.default._dict_
         elif ret is sentinel:
             raise AttributeError("'{.name}' is not initialized".format(self))
-        return self.type.from_dict(ret), ret
+        else:
+            return self.type.from_dict(ret) if ret is not None else None, ret
 
 
 #class FieldList(Field):

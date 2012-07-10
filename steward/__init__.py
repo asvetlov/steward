@@ -86,7 +86,7 @@ class FieldComp(Field):
 
 class DictProxy(MutableMapping):
     @classmethod
-    def from_dict(cls, type, dct):
+    def _from_dict(cls, type, dct):
         ret = cls(type)
         ret._dict_ = dct
         return ret
@@ -131,12 +131,12 @@ class FieldDict(Field):
         self.type = type
 
     def setter(self, value):
-        raise AttributeError("FieldList cannot be set")
+        raise AttributeError("FieldDict cannot be set")
 
     def getter(self, dct):
         val = dct.get(self.name, {})
         assert isinstance(dct, dict)
-        return DictProxy.from_dict(self.type, val), val
+        return DictProxy._from_dict(self.type, val), val
 
 
 class Namespace(OrderedDict):

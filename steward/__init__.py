@@ -56,6 +56,8 @@ class FieldComp(Field):
         self.type = type
 
     def setter(self, value):
+        if value is None:
+            return None, None
         if not isinstance(value, self.type):
             raise TypeError("an {} is required".format(self.type.__name__))
         return value, value._dict_

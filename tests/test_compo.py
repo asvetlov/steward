@@ -68,3 +68,14 @@ class TestCompo(unittest.TestCase):
         self.assertEqual('unique', r1.a.a)
         self.assertIs(D.a.default, r1.a)
         self.assertEqual({'a': {'a': 'unique'}}, r1.as_dict())
+
+    def test_assign_to_default(self):
+        r = C()
+        r.a = A(a='value')
+        self.assertEqual({'a': {'a': 'value'}}, r.as_dict())
+
+    def test_override_to_default(self):
+        r = C(a=A(a='value'))
+        self.assertEqual({'a': {'a': 'value'}}, r.as_dict())
+        r = C(a=None)
+        self.assertEqual({'a': None}, r.as_dict())

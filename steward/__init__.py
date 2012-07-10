@@ -21,16 +21,17 @@ class Field:
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        assert self.name
-        ret = instance.__dict__.get(self.name, sentinel)
+        name = self.name
+        assert name
+        ret = instance.__dict__.get(name, sentinel)
         if ret is sentinel:
-            ret, as_dct = self.getter(instance._dict_)
-            instance.__dict__[self.name] = ret
-            instance._dict_[self.name] = as_dct
+            ret, as_dct = self.getter(instance._dict_.get(name, sentinel))
+            instance.__dict__[name] = ret
+            instance._dict_[name] = as_dct
         return ret
 
-    def getter(self, dct):
-        ret = dct.get(self.name, sentinel)
+    def getter(self, dict_value):
+        ret = dict_value
         if ret is sentinel and self.default is not sentinel:
             ret = self.default
         elif ret is sentinel:
@@ -38,10 +39,11 @@ class Field:
         return ret, ret
 
     def __set__(self, instance, value):
-        assert self.name
+        name = self.name
+        assert name
         ret, as_dct = self.setter(value)
-        instance.__dict__[self.name] = ret
-        instance._dict_[self.name] = as_dct
+        instance.__dict__[name] = ret
+        instance._dict_[name] = as_dct
 
     def setter(self, value):
         return value, value
@@ -62,8 +64,8 @@ class FieldComp(Field):
             raise TypeError("an {} is required".format(self.type.__name__))
         return value, value._dict_
 
-    def getter(self, dct):
-        ret = dct.get(self.name, sentinel)
+    def getter(self, dict_value):
+        ret = dict_value
         if ret is sentinel and self.default is not sentinel:
             if self.default is None:
                 return None, None
@@ -133,10 +135,11 @@ class FieldDict(Field):
     def setter(self, value):
         raise AttributeError("FieldDict cannot be set")
 
-    def getter(self, dct):
-        val = dct.get(self.name, {})
-        assert isinstance(dct, dict)
-        return DictProxy._from_dict(self.type, val), val
+    def getter(self, dict_value):
+        if dict_value is sentinel:
+            dict_value = {}
+        assert isinstance(dict_value, dict)
+        return DictProxy._from_dict(self.type, dict_value), dict_value
 
 
 class Namespace(OrderedDict):

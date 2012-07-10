@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, MutableMapping
 
 
 sentinel = object()
@@ -39,11 +39,12 @@ class Field:
 
     def __set__(self, instance, value):
         assert self.name
-        self.setter(instance, value)
+        ret, as_dct = self.setter(value)
+        instance.__dict__[self.name] = ret
+        instance._dict_[self.name] = as_dct
 
-    def setter(self, instance, value):
-        instance._dict_[self.name] = value
-        instance.__dict__[self.name] = value
+    def setter(self, value):
+        return value, value
 
 
 class FieldComp(Field):
@@ -51,11 +52,10 @@ class FieldComp(Field):
         super().__init__()
         self.type = type
 
-    def setter(self, instance, value):
+    def setter(self, value):
         if not isinstance(value, self.type):
             raise TypeError("an {} is required".format(self.type.__name__))
-        instance._dict_[self.name] = value._dict_
-        instance.__dict__[self.name] = value
+        return value, value._dict_
 
     def getter(self, dct):
         ret = dct.get(self.name, sentinel)
@@ -66,38 +66,68 @@ class FieldComp(Field):
         return self.type.from_dict(ret), ret
 
 
-class FieldList(Field):
-    def __init__(self):
-        super().__init__(maker=list)
+#class FieldList(Field):
+#    def __init__(self, factory):
+#        super().__init__(maker=list)
+#        self.factory = factory
+#
+#    def setter(self, instance, value):
+#        raise AttributeError("FieldList cannot be set")
 
-    def setter(self, instance, value):
-        raise AttributeError("FieldList cannot be set")
+
+class DictProxy(MutableMapping):
+    @classmethod
+    def from_dict(cls, type, dct):
+        ret = cls(type)
+        ret._dict_ = dct
+        return ret
+
+    def __init__(self, type):
+        self.type = type
+        self._dict_ = {}
+        self.__objects = {}
+
+    def as_dict(self):
+        return self._dict_
+
+    def __len__(self):
+        return len(self._dict_)
+
+    def __iter__(self):
+        return iter(self._dict_)
+
+    def __getitem__(self, key):
+        ret = self.__objects.get(key, sentinel)
+        if ret is not sentinel:
+            return ret
+        subdict = self._dict_[key]
+        assert isinstance(subdict, dict)
+        ret = self.type.from_dict(subdict)
+        self.__objects[key] = ret
+        return ret
+
+    def __setitem__(self, key, val):
+        assert isinstance(val, self.type)
+        self.__objects[key] = val
+        self._dict_[key] = val._dict_
+
+    def __delitem__(self, key):
+        del self._dict_[key]
+        self.__objects.pop(key, None)
 
 
 class FieldDict(Field):
-    def __init__(self):
-        super().__init__(maker=dict)
+    def __init__(self, type):
+        super().__init__()
+        self.type = type
 
-    def setter(self, instance, value):
+    def setter(self, value):
         raise AttributeError("FieldList cannot be set")
 
-
-class FieldCompList(Field):
-    def __init__(self, factory):
-        super().__init__(maker=list)
-        self.factory = factory
-
-    def setter(self, instance, value):
-        raise AttributeError("FieldList cannot be set")
-
-
-class FieldCompDict(Field):
-    def __init__(self, factory):
-        super().__init__(maker=dict)
-        self.factory = factory
-
-    def setter(self, instance, value):
-        raise AttributeError("FieldList cannot be set")
+    def getter(self, dct):
+        val = dct.get(self.name, {})
+        assert isinstance(dct, dict)
+        return DictProxy.from_dict(self.type, val), val
 
 
 class Namespace(OrderedDict):

@@ -74,7 +74,7 @@ class TestCompo(unittest.TestCase):
         r.a = A(a='value')
         self.assertEqual({'a': {'a': 'value'}}, r.as_dict())
 
-    def test_override_to_default(self):
+    def test_override_default(self):
         r = C(a=A(a='value'))
         self.assertEqual({'a': {'a': 'value'}}, r.as_dict())
         r = C(a=None)

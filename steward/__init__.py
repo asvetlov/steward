@@ -53,7 +53,8 @@ class FieldComp(Field):
     def __init__(self, type, *, default=sentinel):
         if default is not None and default is not sentinel:
             if not isinstance(default, type):
-                raise TypeError("an {} is required".format(self.type.__name__))
+                raise TypeError("an {} is required, got {}".format(
+                        self.type.__name__, type(default).__name__))
         super().__init__(default=default)
         self.type = type
 
@@ -61,7 +62,8 @@ class FieldComp(Field):
         if value is None:
             return None, None
         if not isinstance(value, self.type):
-            raise TypeError("an {} is required".format(self.type.__name__))
+            raise TypeError("an {} is required, got {}".format(
+                    self.type.__name__, type(value).__name__))
         return value, value._dict_
 
     def getter(self, dict_value):

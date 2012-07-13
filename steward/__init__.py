@@ -1,4 +1,4 @@
-from collections import OrderedDict, MutableMapping
+from collections import OrderedDict, MutableMapping, MutableSequence, Sequence
 
 
 sentinel = object()
@@ -79,15 +79,6 @@ class FieldComp(Field):
             return self.type.from_dict(ret) if ret is not None else None, ret
 
 
-#class FieldList(Field):
-#    def __init__(self, factory):
-#        super().__init__(maker=list)
-#        self.factory = factory
-#
-#    def setter(self, instance, value):
-#        raise AttributeError("FieldList cannot be set")
-
-
 class DictProxy(MutableMapping):
     @classmethod
     def _from_dict(cls, type, dct):
@@ -142,6 +133,78 @@ class FieldDict(Field):
             dict_value = {}
         assert isinstance(dict_value, dict)
         return DictProxy._from_dict(self.type, dict_value), dict_value
+
+
+class ListProxy(MutableSequence):
+    @classmethod
+    def _from_list(cls, type, lst):
+        ret = cls(type)
+        ret._list_ = lst
+        return ret
+
+    def __init__(self, type):
+        self.type = type
+        self._list_ = []
+        self.__shadow = None
+
+    def as_list(self):
+        return self._list_
+
+    def __len__(self):
+        return len(self._list_)
+
+    def __iter__(self):
+        return iter(self._list_)
+
+    def __getitem__(self, index):
+        if self.__shadow is None:
+            t = self.type
+            self.__shadow = [t.from_dict(i) for i in self._list_]
+        return self.__shadow[index]
+
+    def __setitem__(self, index, val):
+        if self.__shadow is None:
+            t = self.type
+            self.__shadow = [t.from_dict(i) for i in self._list_]
+        self.__shadow[index] = val
+        if isinstance(val, Sequence):
+            nv = []
+            for i in val:
+                assert isinstace(i, self.type)
+                nv.append(i._dict_)
+        else:
+            nv = val._dict_
+        self._list_[index] = nv
+
+    def __delitem__(self, index):
+        if self.__shadow is None:
+            t = self.type
+            self.__shadow = [t.from_dict(i) for i in self._list_]
+        del self._list_[index]
+        del self.__shadow[index]
+
+    def insert(self, index, value):
+        assert isinstance(value, self.type)
+        if self.__shadow is None:
+            t = self.type
+            self.__shadow = [t.from_dict(i) for i in self._list_]
+        self.__shadow.insert(index, value)
+        self._list_.insert(index, value._dict_)
+
+
+class FieldList(Field):
+    def __init__(self, type):
+        super().__init__()
+        self.type = type
+
+    def setter(self, value):
+        raise AttributeError("FieldList cannot be set")
+
+    def getter(self, list_value):
+        if list_value is sentinel:
+            list_value = []
+        assert isinstance(list_value, list)
+        return ListProxy._from_list(self.type, list_value), list_value
 
 
 class Namespace(OrderedDict):

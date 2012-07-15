@@ -25,13 +25,13 @@ class Field:
         assert name
         ret = instance.__dict__.get(name, sentinel)
         if ret is sentinel:
-            ret, as_dct = self.getter(instance._dict_.get(name, sentinel))
+            ret, plainval = self.getter(instance._plain_.get(name, sentinel))
             instance.__dict__[name] = ret
-            instance._dict_[name] = as_dct
+            instance._plain_[name] = plainval
         return ret
 
-    def getter(self, dict_value):
-        ret = dict_value
+    def getter(self, plainval):
+        ret = plainval
         if ret is sentinel and self.default is not sentinel:
             ret = self.default
         elif ret is sentinel:
@@ -41,9 +41,9 @@ class Field:
     def __set__(self, instance, value):
         name = self.name
         assert name
-        ret, as_dct = self.setter(value)
+        ret, plainval = self.setter(value)
         instance.__dict__[name] = ret
-        instance._dict_[name] = as_dct
+        instance._plain_[name] = plainval
 
     def setter(self, value):
         return value, value
@@ -64,59 +64,59 @@ class FieldComp(Field):
         if not isinstance(value, self.type):
             raise TypeError("an {} is required, got {}".format(
                     self.type.__name__, type(value).__name__))
-        return value, value._dict_
+        return value, value._plain_
 
-    def getter(self, dict_value):
-        ret = dict_value
+    def getter(self, plainval):
+        ret = plainval
         if ret is sentinel and self.default is not sentinel:
             if self.default is None:
                 return None, None
             else:
-                return self.default, self.default._dict_
+                return self.default, self.default._plain_
         elif ret is sentinel:
             raise AttributeError("'{.name}' is not initialized".format(self))
         else:
-            return self.type.from_dict(ret) if ret is not None else None, ret
+            return self.type.from_plain(ret) if ret is not None else None, ret
 
 
 class DictProxy(MutableMapping):
     @classmethod
-    def _from_dict(cls, type, dct):
+    def _from_plain(cls, type, plainval):
         ret = cls(type)
-        ret._dict_ = dct
+        ret._plain_ = plainval
         return ret
 
     def __init__(self, type):
         self.type = type
-        self._dict_ = {}
+        self._plain_ = {}
         self.__objects = {}
 
-    def as_dict(self):
-        return self._dict_
+    def as_plain(self):
+        return self._plain_
 
     def __len__(self):
-        return len(self._dict_)
+        return len(self._plain_)
 
     def __iter__(self):
-        return iter(self._dict_)
+        return iter(self._plain_)
 
     def __getitem__(self, key):
         ret = self.__objects.get(key, sentinel)
         if ret is not sentinel:
             return ret
-        subdict = self._dict_[key]
-        assert isinstance(subdict, dict)
-        ret = self.type.from_dict(subdict)
+        plainitem = self._plain_[key]
+        assert isinstance(plainitem, dict)
+        ret = self.type.from_plain(plainitem)
         self.__objects[key] = ret
         return ret
 
     def __setitem__(self, key, val):
         assert isinstance(val, self.type)
         self.__objects[key] = val
-        self._dict_[key] = val._dict_
+        self._plain_[key] = val._plain_
 
     def __delitem__(self, key):
-        del self._dict_[key]
+        del self._plain_[key]
         self.__objects.pop(key, None)
 
 
@@ -128,68 +128,68 @@ class FieldDict(Field):
     def setter(self, value):
         raise AttributeError("FieldDict cannot be set")
 
-    def getter(self, dict_value):
-        if dict_value is sentinel:
-            dict_value = {}
-        assert isinstance(dict_value, dict)
-        return DictProxy._from_dict(self.type, dict_value), dict_value
+    def getter(self, plainval):
+        if plainval is sentinel:
+            plainval = {}
+        assert isinstance(plainval, dict)
+        return DictProxy._from_plain(self.type, plainval), plainval
 
 
 class ListProxy(MutableSequence):
     @classmethod
-    def _from_list(cls, type, lst):
+    def _from_plain(cls, type, plainval):
         ret = cls(type)
-        ret._list_ = lst
+        ret._plain_ = plainval
         return ret
 
     def __init__(self, type):
         self.type = type
-        self._list_ = []
+        self._plain_ = []
         self.__shadow = None
 
-    def as_list(self):
-        return self._list_
+    def as_plain(self):
+        return self._plain_
 
     def __len__(self):
-        return len(self._list_)
+        return len(self._plain_)
 
     def __iter__(self):
-        return iter(self._list_)
+        return iter(self._plain_)
 
     def __getitem__(self, index):
         if self.__shadow is None:
             t = self.type
-            self.__shadow = [t.from_dict(i) for i in self._list_]
+            self.__shadow = [t.from_plain(i) for i in self._plain_]
         return self.__shadow[index]
 
     def __setitem__(self, index, val):
         if self.__shadow is None:
             t = self.type
-            self.__shadow = [t.from_dict(i) for i in self._list_]
+            self.__shadow = [t.from_plain(i) for i in self._plain_]
         self.__shadow[index] = val
         if isinstance(val, Sequence):
             nv = []
             for i in val:
                 assert isinstace(i, self.type)
-                nv.append(i._dict_)
+                nv.append(i._plain_)
         else:
-            nv = val._dict_
-        self._list_[index] = nv
+            nv = val._plain_
+        self._plain_[index] = nv
 
     def __delitem__(self, index):
         if self.__shadow is None:
             t = self.type
-            self.__shadow = [t.from_dict(i) for i in self._list_]
-        del self._list_[index]
+            self.__shadow = [t.from_plain(i) for i in self._plain_]
+        del self._plain_[index]
         del self.__shadow[index]
 
     def insert(self, index, value):
         assert isinstance(value, self.type)
         if self.__shadow is None:
             t = self.type
-            self.__shadow = [t.from_dict(i) for i in self._list_]
+            self.__shadow = [t.from_plain(i) for i in self._plain_]
         self.__shadow.insert(index, value)
-        self._list_.insert(index, value._dict_)
+        self._plain_.insert(index, value._plain_)
 
 
 class FieldList(Field):
@@ -200,11 +200,11 @@ class FieldList(Field):
     def setter(self, value):
         raise AttributeError("FieldList cannot be set")
 
-    def getter(self, list_value):
-        if list_value is sentinel:
-            list_value = []
-        assert isinstance(list_value, list)
-        return ListProxy._from_list(self.type, list_value), list_value
+    def getter(self, plainval):
+        if plainval is sentinel:
+            plainval = []
+        assert isinstance(plainval, list)
+        return ListProxy._from_plain(self.type, plainval), plainval
 
 
 class Namespace(OrderedDict):
@@ -236,7 +236,7 @@ class ComponentMeta(type):
 class Component(metaclass=ComponentMeta):
 
     def __init__(self, **kwargs):
-        self._dict_ = {}
+        self._plain_ = {}
         names = self._names_
         delta = frozenset(kwargs) - names
         if delta:
@@ -263,10 +263,10 @@ class Component(metaclass=ComponentMeta):
             raise Error("Missing params: '{}'".format(missing))
 
     @classmethod
-    def from_dict(cls, dct):
+    def from_plain(cls, plainval):
         self = object.__new__(cls)
-        self._dict_ = dct
+        self._plain_ = plainval
         return self
 
-    def as_dict(self):
-        return self._dict_
+    def as_plain(self):
+        return self._plain_

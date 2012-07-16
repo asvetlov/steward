@@ -203,7 +203,9 @@ class FieldList(Field):
     def getter(self, plainval):
         if plainval is sentinel:
             plainval = []
-        assert isinstance(plainval, list)
+        if isinstance(plainval, tuple):
+            plainval = list(plainval)
+        assert isinstance(plainval, list), plainval
         return ListProxy._from_plain(self.type, plainval), plainval
 
 

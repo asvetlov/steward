@@ -18,8 +18,8 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    description='''Library for easy converting between plain JSON-like data and
-                 compound structure of user defined class instances.''',
+    description='Library for easy converting between plain JSON-like data '\
+        'and compound structure of user defined class instances.',
     long_description="""
     """,
 )

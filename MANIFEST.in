@@ -1,0 +1,4 @@
+recursive-include steward *.py
+include setup.py
+include LICENSE
+include README.rst

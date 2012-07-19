@@ -1,3 +1,5 @@
+__version__ = '0.0.2'
+
 from collections import OrderedDict, MutableMapping, MutableSequence, Sequence
 
 

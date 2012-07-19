@@ -5,7 +5,7 @@ Library for easy bi-direction converting between plain JSON-like data
 (numbers, strings, lists and dicts) and compound user-defined classes.
 
 
-Let's look on simple example::
+Trivial example::
 
     >>> from steward import *
     >>> class Comp(Component):

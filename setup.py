@@ -22,4 +22,5 @@ setup(
         'and compound structure of user defined class instances.',
     long_description="""
     """,
+    platforms=['any'],
 )

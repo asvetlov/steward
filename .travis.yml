@@ -6,5 +6,5 @@ python:
 install: python setup.py install
 # command to run tests
 script:
-  - python -m unittest
-  - python -m doctest README.rst
+  - python -m unittest -v
+  - python -m doctest -v README.rst

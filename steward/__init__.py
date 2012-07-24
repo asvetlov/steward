@@ -1,6 +1,7 @@
 __version__ = '0.0.2'
 
 from collections import OrderedDict, MutableMapping, MutableSequence, Sequence
+from reprlib import recursive_repr as _recursive_repr
 
 
 sentinel = object()
@@ -11,19 +12,32 @@ class Error(Exception):
 
 
 class Field:
-    name = None
+    __name__ = None
 
     def __init__(self, *, default=sentinel):
         self.default = default
 
     def set_name(self, name):
-        assert self.name is None, self.name
-        self.name = name
+        assert self.__name__ is None, self.__name__
+        #assert isinstance(self.__name__, str), self.__name__
+        self.__name__ = name
+
+    @_recursive_repr()
+    def __repr__(self):
+        if self.__name__ is None:
+            return '<Unbound>'
+        else:
+            if self.default is not sentinel:
+                default = ' default={!r}'.format(self.default)
+            else:
+                default = ''
+            return "<{} '{}'{}>".format(self.__class__.__name__,
+                                        self.__name__, default)
 
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        name = self.name
+        name = self.__name__
         assert name
         ret = instance.__dict__.get(name, sentinel)
         if ret is sentinel:
@@ -37,11 +51,11 @@ class Field:
         if ret is sentinel and self.default is not sentinel:
             ret = self.default
         elif ret is sentinel:
-            raise AttributeError("'{.name}' is not initialized".format(self))
+            raise AttributeError("'{.name}' is unbound".format(self))
         return ret, ret
 
     def __set__(self, instance, value):
-        name = self.name
+        name = self.__name__
         assert name
         ret, plainval = self.setter(value)
         instance.__dict__[name] = ret
@@ -53,12 +67,28 @@ class Field:
 
 class FieldComp(Field):
     def __init__(self, type, *, default=sentinel):
+        assert issubclass(type, Component), type
         if default is not None and default is not sentinel:
             if not isinstance(default, type):
                 raise TypeError("an {} is required, got {}".format(
                         self.type.__name__, type(default).__name__))
         super().__init__(default=default)
         self.type = type
+
+    @_recursive_repr()
+    def __repr__(self):
+        if self.__name__ is None:
+            return '<Unbound>'
+        else:
+            if self.default is not sentinel:
+                default = ' default={!r}'.format(self.default)
+            else:
+                default = ''
+            return "<{} '{}'[{}.{}]{}>".format(self.__class__.__name__,
+                                               self.__name__,
+                                               self.type.__module__,
+                                               self.type.__name__,
+                                               default)
 
     def setter(self, value):
         if value is None:
@@ -124,6 +154,7 @@ class DictProxy(MutableMapping):
 
 class FieldDict(Field):
     def __init__(self, type):
+        assert issubclass(type, Component), type
         super().__init__()
         self.type = type
 
@@ -196,6 +227,7 @@ class ListProxy(MutableSequence):
 
 class FieldList(Field):
     def __init__(self, type):
+        assert issubclass(type, Component), type
         super().__init__()
         self.type = type
 

@@ -10,6 +10,16 @@ class Error(Exception):
     """Base error"""
 
 
+class Forward:
+    """Forward declaration for some field"""
+    def __init__(self):
+        self.sealed = None
+
+    def seal(self, klass):
+        assert isinstance(klass, Component)
+        self.sealed = klass
+
+
 class Field:
     name = None
 
@@ -51,7 +61,18 @@ class Field:
         return value, value
 
 
-class FieldComp(Field):
+class _CompMixin:
+    def check_type(self):
+        if isinstance(self.type, Forward):
+            pass
+        if not issubclass(self.type, Component):
+            raise TypeError("Component subclass required")
+
+    def check_sealed(self):
+        self.type
+
+
+class FieldComp(Field, _CompMixin):
     def __init__(self, type, *, default=sentinel):
         if default is not None and default is not sentinel:
             if not isinstance(default, type):
@@ -59,6 +80,7 @@ class FieldComp(Field):
                         self.type.__name__, type(default).__name__))
         super().__init__(default=default)
         self.type = type
+        self.check_type()
 
     def setter(self, value):
         if value is None:
@@ -122,8 +144,9 @@ class DictProxy(MutableMapping):
         self.__objects.pop(key, None)
 
 
-class FieldDict(Field):
+class FieldDict(Field, _CompMixin):
     def __init__(self, type):
+        self.check_type(type)
         super().__init__()
         self.type = type
 
@@ -194,8 +217,9 @@ class ListProxy(MutableSequence):
         self._plain_.insert(index, value._plain_)
 
 
-class FieldList(Field):
+class FieldList(Field, _CompMixin):
     def __init__(self, type):
+        self.check_type(type)
         super().__init__()
         self.type = type
 

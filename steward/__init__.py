@@ -212,9 +212,12 @@ class FieldList(Field):
 
 
 class Namespace(OrderedDict):
-    def __init__(self):
+    def __init__(self, bases):
         super().__init__()
         self.fields = {}
+        for b in bases:
+            if issubclass(b, Component):
+                self.fields.update(b._fields_)
 
     def __setitem__(self, key, val):
         super().__setitem__(key, val)
@@ -229,7 +232,7 @@ class Namespace(OrderedDict):
 class ComponentMeta(type):
     @classmethod
     def __prepare__(cls, name, bases):
-        return Namespace()
+        return Namespace(bases)
 
     def __init__(cls, name, bases, dct):
         type.__init__(cls, name, bases, dct)

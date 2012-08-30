@@ -22,3 +22,9 @@ class TestInheritance(unittest.TestCase):
         b = B(a=1, b=2)
         self.assertEqual(1, b.a)
         self.assertEqual(2, b.b)
+
+    def test_plain(self):
+        b = B(a=1, b=2)
+        self.assertEqual({'a': 1, 'b': 2}, b.as_plain())
+        c = B.from_plain(b.as_plain())
+        self.assertEqual(b.as_plain(), c.as_plain())

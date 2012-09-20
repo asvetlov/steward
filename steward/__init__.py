@@ -156,7 +156,10 @@ class ListProxy(MutableSequence):
         return len(self._plain_)
 
     def __iter__(self):
-        return iter(self._plain_)
+        if self.__shadow is None:
+            t = self.type
+            self.__shadow = [t.from_plain(i) for i in self._plain_]
+        return iter(self.__shadow)
 
     def __getitem__(self, index):
         if self.__shadow is None:

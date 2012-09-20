@@ -1,4 +1,5 @@
 import unittest
+from collections import Iterator
 from steward import Component, Field, FieldComp, FieldList, Error
 
 
@@ -53,3 +54,14 @@ class TestList(unittest.TestCase):
         del r.a[0]
         self.assertEqual(1, len(r.a))
         self.assertEqual({'a': [{'a': 'b'}]}, r.as_plain())
+
+    def test_iter(self):
+        d = {'a': [{'a': 'a'},
+                   {'a': 'b'}]}
+        i1 = A.from_plain({'a': 'a'})
+        i2 = A.from_plain({'a': 'b'})
+        r = B.from_plain(d)
+        _iter = iter(r.a)
+        self.assertIsInstance(_iter, Iterator)
+        self.assertEqual(i1.as_plain(), next(_iter).as_plain())
+        self.assertEqual(i2.as_plain(), next(_iter).as_plain())

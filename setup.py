@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='steward',
-    version='0.0.2',
+    version='0.0.3',
     author='Andrew Svetlov',
     author_email='andrew.svetlov@gmail.com',
     url='https://github.com/asvetlov/steward',

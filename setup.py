@@ -1,8 +1,11 @@
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 setup(
     name='steward',
-    version='0.0.3',
+    version='0.0.4',
     author='Andrew Svetlov',
     author_email='andrew.svetlov@gmail.com',
     url='https://github.com/asvetlov/steward',

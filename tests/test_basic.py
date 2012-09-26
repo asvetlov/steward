@@ -59,3 +59,21 @@ class TestBasic(unittest.TestCase):
     def test_as_plain(self):
         a = A(a=5, b=6)
         self.assertEqual({'a': 5, 'b': 6, 'c': 'zzz'}, a.as_plain())
+
+    def test_const(self):
+        class C(Component):
+            a = Field()
+            b = Field(const=True)
+        c = C(a=1, b=2)
+        self.assertEqual(1, c.a)
+        self.assertEqual(2, c.b)
+        with self.assertRaises(AttributeError):
+            c.b = 3
+
+    def test_default_const(self):
+        class A(Component):
+            a = Field(const=True, default='a')
+        a = A()
+        self.assertEqual('a', a.a)
+        with self.assertRaises(AttributeError):
+            a.a = 'b'

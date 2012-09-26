@@ -13,8 +13,9 @@ class Error(Exception):
 class Field:
     name = None
 
-    def __init__(self, *, default=sentinel):
+    def __init__(self, *, default=sentinel, const=False):
         self.default = default
+        self.const = const
 
     def set_name(self, name):
         assert self.name is None, self.name
@@ -40,9 +41,12 @@ class Field:
             raise AttributeError("'{.name}' is not initialized".format(self))
         return ret, ret
 
-    def __set__(self, instance, value):
+    def __set__(self, instance, value, check_const=True):
         name = self.name
         assert name
+        if check_const and self.const:
+            raise AttributeError(
+                "Constant '{.name}' cannot be set".format(self))
         ret, plainval = self.setter(value)
         instance.__dict__[name] = ret
         instance._plain_[name] = plainval
@@ -52,12 +56,12 @@ class Field:
 
 
 class FieldComp(Field):
-    def __init__(self, type, *, default=sentinel):
+    def __init__(self, type, *, default=sentinel, const=False):
         if default is not None and default is not sentinel:
             if not isinstance(default, type):
                 raise TypeError("an {} is required, got {}".format(
                         self.type.__name__, type(default).__name__))
-        super().__init__(default=default)
+        super().__init__(default=default, const=const)
         self.type = type
 
     def setter(self, value):
@@ -256,7 +260,7 @@ class Component(metaclass=ComponentMeta):
         fields = self._fields_
         for k, v in kwargs.items():
             if k in names:
-                fields[k].__set__(self, v)
+                fields[k].__set__(self, v, check_const=False)
         missing = names - set(kwargs.keys())
         if not missing:
             return

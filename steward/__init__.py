@@ -1,6 +1,7 @@
 __version__ = '0.0.2'
 
 from collections import OrderedDict, MutableMapping, MutableSequence, Sequence
+from copy import deepcopy
 
 
 sentinel = object()
@@ -284,3 +285,13 @@ class Component(metaclass=ComponentMeta):
 
     def as_plain(self):
         return self._plain_
+
+    def clone(self, **kwargs):
+        ret = self.__class__(**deepcopy(self.as_plain()))
+        fields = self._fields_
+        for k, v in kwargs.items():
+            field = fields.get(k)
+            if field is None:
+                raise Error("Unknown field '{}' cannot be set".format(k))
+            field.__set__(ret, v, check_const=False)
+        return ret

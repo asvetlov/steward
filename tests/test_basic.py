@@ -77,3 +77,42 @@ class TestBasic(unittest.TestCase):
         self.assertEqual('a', a.a)
         with self.assertRaises(AttributeError):
             a.a = 'b'
+
+    def test_clone(self):
+        class C(Component):
+            a = Field()
+            b = Field(const=True)
+        a = C(a=1, b=2)
+        self.assertEqual(1, a.a)
+        self.assertEqual(2, a.b)
+        b = a.clone()
+        self.assertEqual(1, b.a)
+        self.assertEqual(2, b.b)
+        self.assertIs(C, a.__class__)
+        self.assertIs(C, b.__class__)
+
+    def test_clone_update_mutable_field(self):
+        class C(Component):
+            a = Field()
+            b = Field(const=True)
+        a = C(a=1, b=2)
+        b = a.clone(a=3)
+        self.assertEqual(3, b.a)
+        self.assertEqual(2, b.b)
+
+    def test_clone_update_immutable_field(self):
+        class C(Component):
+            a = Field()
+            b = Field(const=True)
+        a = C(a=1, b=2)
+        b = a.clone(b=3)
+        self.assertEqual(1, b.a)
+        self.assertEqual(3, b.b)
+
+    def test_clone_cannot_update_unknown_field(self):
+        class C(Component):
+            a = Field()
+            b = Field(const=True)
+        a = C(a=1, b=2)
+        with self.assertRaises(Error):
+            a.clone(unknown=3)

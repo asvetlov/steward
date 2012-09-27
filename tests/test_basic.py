@@ -116,3 +116,17 @@ class TestBasic(unittest.TestCase):
         a = C(a=1, b=2)
         with self.assertRaises(Error):
             a.clone(unknown=3)
+
+    def test_cannot_specify_both_defaut_and_maker(self):
+        with self.assertRaises(TypeError):
+            Field(default=1, maker=int)
+
+    def test_maker_should_be_callable(self):
+        with self.assertRaises(TypeError):
+            Field(maker=1)
+
+    def test_maker(self):
+        class C(Component):
+            a = Field(maker=lambda: 'a')
+        c = C()
+        self.assertEqual('a', c.a)

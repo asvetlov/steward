@@ -18,6 +18,10 @@ class D(Component):
     a = FieldComp(A, default=A(a="unique"))
 
 
+class E(Component):
+    a = FieldComp(A, maker=lambda: A(a="made"))
+
+
 class TestCompo(unittest.TestCase):
     def test_ctor(self):
         a = A(a=1)
@@ -79,3 +83,7 @@ class TestCompo(unittest.TestCase):
         self.assertEqual({'a': {'a': 'value'}}, r.as_plain())
         r = C(a=None)
         self.assertEqual({'a': None}, r.as_plain())
+
+    def test_maker(self):
+        r = E()
+        self.assertEqual({'a': {'a': 'made'}}, r.as_plain())

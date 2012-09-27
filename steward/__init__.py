@@ -14,9 +14,16 @@ class Error(Exception):
 class Field:
     name = None
 
-    def __init__(self, *, default=sentinel, const=False):
+    def __init__(self, *, default=sentinel, const=False, maker=sentinel):
         self.default = default
+        self.maker = maker
         self.const = const
+        if self.maker is not sentinel:
+            if self.default is not sentinel:
+                raise TypeError("Cannot specify both `default` and `maker`")
+            if not callable(self.maker):
+                raise TypeError("`maker` should be callable "
+                                "accepting no parameters.")
 
     def set_name(self, name):
         assert self.name is None, self.name
@@ -38,6 +45,8 @@ class Field:
         ret = plainval
         if ret is sentinel and self.default is not sentinel:
             ret = self.default
+        elif ret is sentinel and self.maker is not sentinel:
+            ret = self.maker()
         elif ret is sentinel:
             raise AttributeError("'{.name}' is not initialized".format(self))
         return ret, ret
@@ -57,12 +66,14 @@ class Field:
 
 
 class FieldComp(Field):
-    def __init__(self, type, *, default=sentinel, const=False):
+    def __init__(self, type, *, default=sentinel, const=False, maker=sentinel):
+        if not issubclass(type, Component):
+            raise TypeError("`type` should be subclass of steward.Component")
         if default is not None and default is not sentinel:
             if not isinstance(default, type):
                 raise TypeError("an {} is required, got {}".format(
                         self.type.__name__, type(default).__name__))
-        super().__init__(default=default, const=const)
+        super().__init__(default=default, const=const, maker=maker)
         self.type = type
 
     def setter(self, value):
@@ -80,6 +91,14 @@ class FieldComp(Field):
                 return None, None
             else:
                 return self.default, self.default._plain_
+        if ret is sentinel and self.maker is not sentinel:
+            val = self.maker()
+            if val is None:
+                return None, None
+            if not isinstance(val, self.type):
+                raise TypeError("`maker` should return object of type {!r}".
+                                format(self.type))
+            return val, val._plain_
         elif ret is sentinel:
             raise AttributeError("'{.name}' is not initialized".format(self))
         else:
